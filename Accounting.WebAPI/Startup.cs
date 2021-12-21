@@ -15,9 +15,9 @@ using Microsoft.EntityFrameworkCore;
 using Accounting.WebAPI.Enum;
 using Accounting.WebAPI.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
-using NLog;
 using System.IO;
 using Accounting.WebAPI.Contracts;
+using Accounting.WebAPI.Mappings;
 
 
 namespace Accounting.WebAPI
@@ -26,8 +26,6 @@ namespace Accounting.WebAPI
     {
         public Startup(IConfiguration configuration)
         {
-            LogManager.LoadConfiguration(string.Concat(Directory.GetCurrentDirectory(), "/nlog.config"));
-
             Configuration = configuration;
         }
 
@@ -37,20 +35,20 @@ namespace Accounting.WebAPI
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.ConfigureSqlContext(Configuration);
+
+            services.AddAuthentication();
+
+            services.ConfigureIdentity();
+
             services.ConfigureCors();
 
             services.ConfigureIISIntegration();
 
-            services.ConfigureLoggerService();
+            services.AddAutoMapper(typeof(MapperInitilizer));
 
-            //services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
-            services.AddAutoMapper(typeof(Startup));
-
-            services.ConfigureSqlContext(Configuration);
-
-            //services.AddDbContext<AccountingContext>();
-
+            //services.AddTransient<IUnitOfWork, UnitOfWork>();
+            #region *
             services.AddTransient<IUnitOfWork, UnitOfWork>(sp =>
              {
                  Data.Tools.Options options =
@@ -66,16 +64,20 @@ namespace Accounting.WebAPI
 
                  return new UnitOfWork(options: options);
              });
+            #endregion *
 
-            services.AddAuthentication();
 
-            services.AddControllers();
+            /*We are basically saying when you notice the reference loop happening , do not make big deal out of just
+             ignore it and let program run*/
+            services.AddControllers().AddNewtonsoftJson(op =>
+                op.SerializerSettings.ReferenceLoopHandling =
+                    Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
             services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.SuppressModelStateInvalidFilter = true;
             });
-            
+
             /*It supports versioning so if we have version 1 , version 2 .. we are able to keep trackes of the versions or let whoever reades the documention know which 
             of the api they are looking at*/
             services.AddSwaggerGen(c =>

@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 using Accounting.WebAPI.Entities;
 using Accounting.WebAPI.EntityTypeConfiguration;
 using Accounting.WebAPI.Enum;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace Accounting.WebAPI.Data
 {
-    public class AccountingContext : DbContext
+    /*So this just another class that allows us to take advantages of identity services*/
+    public class AccountingContext : IdentityDbContext<ApiUser>
     {
         public AccountingContext(DbContextOptions<AccountingContext> options) : base(options)
         {
         }
-        //public DbSet<RealPerson> RealPeople { get; set; }
-        //public DbSet<LegalPerson> LegalPeople { get; set; }
         public DbSet<Person> People { get; set; }
         public DbSet<Cash> Cashes { get; set; }
         public DbSet<Document> Documents { get; set; }
@@ -23,13 +23,12 @@ namespace Accounting.WebAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            //var tvContracts = context.Contracts.OfType<TvContract>().ToList();
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.Entity<RealPerson>();
             modelBuilder.Entity<LegalPerson>();
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AccountingContext).Assembly);
-
-            //modelBuilder.Seed();
         }
     }
 }

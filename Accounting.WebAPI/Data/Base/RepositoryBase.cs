@@ -27,43 +27,17 @@ namespace Accounting.WebAPI.Data.Base
         internal DbSet<T> DbSet { get; }
 
 
-        public virtual IList<T> GetAll()
-        {
-            var result =
-                DbSet.ToList();
-
-            return result;
-        }
-
-
         public virtual async Task<IList<T>> GetAllAsync()
         {
-             var result = await DbSet.ToListAsync();
+            var result = await DbSet.ToListAsync();
 
             return result;
-        }
-
-
-        public virtual T GetById(int id)
-        {
-            return DbSet.Find(keyValues: id);
         }
 
 
         public virtual async Task<T> GetByIdAsync(int id)
         {
             return await DbSet.FindAsync(keyValues: id);
-        }
-
-
-        public virtual void Insert(T entity)
-        {
-            if (entity == null)
-            {
-                throw new System.ArgumentNullException(paramName: nameof(entity));
-            }
-
-            DbSet.Add(entity);
         }
 
 
@@ -75,18 +49,6 @@ namespace Accounting.WebAPI.Data.Base
             }
 
             await DbSet.AddAsync(entity);
-        }
-
-
-        public virtual void Delete(T entity)
-        {
-            if (entity == null)
-            {
-                throw new System.ArgumentNullException(paramName: nameof(entity));
-            }
-
-            DbSet.Remove(entity);
-
         }
 
 
@@ -104,22 +66,7 @@ namespace Accounting.WebAPI.Data.Base
         }
 
 
-        public virtual bool DeleteById(int id)
-        {
-            T entity = GetById(id);
-
-            if (entity == null)
-            {
-                return false;
-            }
-
-            Delete(entity);
-
-            return true;
-        }
-
-
-        public virtual async System.Threading.Tasks.Task<bool> DeleteByIdAsync(int id)
+        public virtual async Task<bool> DeleteByIdAsync(int id)
         {
             T entity =
                 await GetByIdAsync(id);
@@ -137,32 +84,60 @@ namespace Accounting.WebAPI.Data.Base
 
         public virtual void Update(T entity)
         {
-            if (entity == null)
-            {
-                throw new System.ArgumentNullException(paramName: nameof(entity));
-            }
-
-            DbSet.Update(entity);
+            /*Check if you have it already , check is there any difference , so the EF core statrs tracking to see that there are certain fields
+             that are different so these are two different records*/
+            DbSet.Attach(entity);
+            /*Once we tell it that it has been modified then it will knot that is ok I need to do an update to it*/
+            AccountingContext.Entry(entity).State = EntityState.Modified;
         }
 
-
-        public virtual async System.Threading.Tasks.Task UpdateAsync(T entity)
+        public async Task<IList<T>> GetAllUdemyAsync(Expression<Func<T, bool>> expression = null, Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null, List<string> includes = null)
         {
-            if (entity == null)
+            IQueryable<T> query = DbSet;
+
+            if (expression != null)
             {
-                throw new System.ArgumentNullException(paramName: nameof(entity));
+                query = query.Where(expression);
             }
 
-            await Task.Run(() =>
+            if (includes != null)
             {
-                DbSet.Update(entity);
-            });
+                foreach (var includeProperty in includes)
+                {
+                    query = query.Include(includeProperty);
+                }
+            }
+
+            if (orderBy != null)
+            {
+                query = orderBy(query);
+            }
+
+            return await query.AsNoTracking().ToListAsync();
         }
 
-        public virtual IQueryable<T> FindAll(bool trackChanges) =>
-            !trackChanges ? DbSet.AsNoTracking().OfType<T>() : DbSet;
+        public async Task<T> GetUdemyAsync(Expression<Func<T, bool>> expression, List<string> includes = null)
+        {
+            IQueryable<T> query = DbSet;
 
-        public virtual IQueryable<T> FindByCondition(Expression<Func<T, bool>> expression, bool trackChanges) =>
-            !trackChanges ? DbSet.Where(expression).AsNoTracking() : DbSet.Where(expression);
+            if (includes != null)
+            {
+                foreach (var includeProperty in includes)
+                {
+                    query = query.Include(includeProperty);
+                }
+            }
+            return await query.AsNoTracking().FirstOrDefaultAsync(expression);
+        }
+
+        public void DeleteRange(IEnumerable<T> entities)
+        {
+            DbSet.RemoveRange(entities);
+        }
+
+        public async Task InsertRange(IEnumerable<T> entities)
+        {
+            await DbSet.AddRangeAsync(entities);
+        }
     }
 }

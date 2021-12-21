@@ -13,13 +13,5 @@ namespace Accounting.WebAPI.Data
         {
         }
 
-        public async Task<IEnumerable<Lookup>> GetAllLookupsAsync(bool trackChanges) =>
-           await FindAll(trackChanges)
-                .OrderBy(x => x.Id)
-                .ToListAsync();
-
-        public async Task<Lookup> GetLookupAsync(int lookupId, bool trackChanges) =>
-            await FindByCondition(c => c.Id==lookupId, trackChanges)
-                  .SingleOrDefaultAsync();
     }
 }

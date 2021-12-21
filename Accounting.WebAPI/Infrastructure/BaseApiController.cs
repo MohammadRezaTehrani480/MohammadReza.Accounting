@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 namespace Infrastructure
 {
     [ApiController]
+    [Route("api/[controller]")]
     [Produces(MediaTypeNames.Application.Json)]
     public class BaseApiController : ControllerBase
     {

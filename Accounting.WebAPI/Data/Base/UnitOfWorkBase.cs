@@ -83,14 +83,15 @@ namespace Accounting.WebAPI.Data.Base
 
         public bool IsDisposed { get; protected set; }
 
-
+        /*Dispose is like garbage collector is just seeing when I am done or when the oprations are done
+         please free up the memoryWhen this is called then please dispose the context , which meanes kill
+         any memory that the connention to the database was using the connection  , all the resources it was using*/
         public void Dispose()
         {
             Dispose(true);
 
-            System.GC.SuppressFinalize(this);
+            GC.SuppressFinalize(this);
         }
-
 
         protected virtual void Dispose(bool disposing)
         {
@@ -112,24 +113,10 @@ namespace Accounting.WebAPI.Data.Base
             IsDisposed = true;
         }
 
-
         ~UnitOfWorkBase()
         {
             Dispose(false);
         }
-
-
-        //public RepositoryBase<T> GetRepository<T>() where T : BaseEntity
-        //{
-        //    return new RepositoryBase<T>(accountingContext: AccountingContext);
-        //}
-
-
-        public virtual void Save()
-        {
-            AccountingContext.SaveChanges();
-        }
-
 
         public virtual async System.Threading.Tasks.Task SaveAsync()
         {

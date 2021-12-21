@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Accounting.Shared.ViewModels.RealPersonViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,8 +7,9 @@ using System.Threading.Tasks;
 
 namespace Accounting.Shared.ViewModels.CashViewModels
 {
-    public class CashDto : BaseModel
+    public class CashDTO : CashCreationDTO
     {
-        public string CashName { get; set; }
+        public int Id { get; set; }
+        public RealPersonDTO Cashier { get; set; }
     }
 }

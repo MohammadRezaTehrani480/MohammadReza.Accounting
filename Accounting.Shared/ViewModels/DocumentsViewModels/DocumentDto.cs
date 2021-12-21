@@ -1,4 +1,5 @@
 ﻿using Accounting.Shared.ViewModels.CashViewModels;
+using Accounting.Shared.ViewModels.PersonViewModels;
 using Accounting.Shared.ViewModels.RealPersonViewModels;
 using System;
 using System.Collections.Generic;
@@ -8,16 +9,12 @@ using System.Threading.Tasks;
 
 namespace Accounting.Shared.ViewModels.DocumentsViewModels
 {
-    public class DocumentDto : BaseModel
+    public class DocumentDTO : DocumentCreationDTO
     {
-        public int DocNo { get; set; }
-        public DateTime Date { get; set; }
-        public decimal Amount { get; set; }
-        public virtual CashDto Cash { get; set; }
-        public int CashId { get; set; }
-        public int PersonId { get; set; }
-        public virtual LookupDTO DocType { get; set; }
-        public int DocTypeId { get; set; }
+        public int Id { get; set; }
+        public CashDTO Cash { get; set; }
+        public PersonDTO AccountSide { get; set; }
+        public LookupDTO DocType { get; set; }
 
     }
 }

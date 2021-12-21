@@ -10,17 +10,14 @@ namespace Infrastructure
 {
     public class BaseApiControllerWithDatabase : BaseApiController
     {
-        public BaseApiControllerWithDatabase(IUnitOfWork unitOfWork, IMapper mapper, ILoggerManager logger) : base()
+        public BaseApiControllerWithDatabase(IUnitOfWork unitOfWork, IMapper mapper) : base()
         {
             UnitOfWork = unitOfWork;
             _mapper = mapper;
-            _logger = logger;
         }
 
         protected IUnitOfWork UnitOfWork { get; }
 
         protected readonly IMapper _mapper;
-
-        protected readonly ILoggerManager _logger;
     }
 }

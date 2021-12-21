@@ -8,9 +8,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Accounting.WebAPI.Contracts;
-using Accounting.WebAPI.LoggerService;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Accounting.WebAPI.Entities;
+using Microsoft.AspNetCore.Identity;
 
 namespace Accounting.WebAPI.Extensions
 {
@@ -31,34 +32,18 @@ namespace Accounting.WebAPI.Extensions
             services.Configure<IISOptions>(options => { });
         }
 
-        //public static void ConfigureSqlContext(this IServiceCollection services, IConfiguration configuration)
-        //{
-        //    services.AddTransient<Data.IUnitOfWork, Data.UnitOfWork>(sp =>
-        //    {
-        //        Data.Tools.Options options =
-        //            new Data.Tools.Options
-        //            {
-        //                Provider =
-        //                    (Provider)Convert.ToInt32(configuration.GetSection(key: "databaseProvider").Value),
-
-
-        //                ConnectionString =
-        //                    configuration.GetSection(key: "ConnectionStrings").GetSection(key: "MyConnectionString").Value,
-        //            };
-
-        //        return new UnitOfWork(options: options);
-        //    });
-        //}
-
-        public static void ConfigureLoggerService(this IServiceCollection services)
-        {
-            services.AddScoped<ILoggerManager, LoggerManager>();
-        }
-
         public static void ConfigureSqlContext(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddDbContext<AccountingContext>(options => 
             options.UseSqlServer(configuration.GetConnectionString("MyConnectionString")));
+        }
+
+        public static void ConfigureIdentity(this IServiceCollection services)
+        {
+            var builder = services.AddIdentityCore<ApiUser>(q => { q.User.RequireUniqueEmail = true; });
+
+            builder = new IdentityBuilder(builder.UserType, typeof(IdentityRole), services);
+            builder.AddEntityFrameworkStores<AccountingContext>().AddDefaultTokenProviders();
         }
     }
 }

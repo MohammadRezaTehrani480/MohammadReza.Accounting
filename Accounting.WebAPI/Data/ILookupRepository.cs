@@ -8,8 +8,6 @@ namespace Accounting.WebAPI.Data
 {
     public interface ILookupRepository : Base.IRepositoryBase<Lookup>
     {
-        Task<IEnumerable<Lookup>> GetAllLookupsAsync(bool trackChanges);
-
-        Task<Lookup> GetLookupAsync(int lookupId, bool trackChanges);
+      
     }
 }

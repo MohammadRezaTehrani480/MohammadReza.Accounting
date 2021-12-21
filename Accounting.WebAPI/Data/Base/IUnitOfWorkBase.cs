@@ -10,10 +10,6 @@ namespace Accounting.WebAPI.Data.Base
     {
         bool IsDisposed { get; }
 
-        void Save();
-
         Task SaveAsync();
-
-        //RepositoryBase<T> GetRepository<T>() where T : BaseEntity;
     }
 }
