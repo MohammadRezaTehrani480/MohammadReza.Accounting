@@ -14,7 +14,7 @@ namespace Accounting.WebAPI.Entities
         public int CashId { get; set; }
         public virtual Cash Cash { get; set; }
         public int PersonId { get; set; }
-        public virtual Person AccountSide { get; set; }
+        public virtual Person Person { get; set; }
         public int DocTypeId { get; set; }
         public virtual Lookup DocType { get; set; }
     }

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Accounting.WebAPI.Migrations
 {
-    public partial class Create : Migration
+    public partial class InitialCreate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -178,9 +178,9 @@ namespace Accounting.WebAPI.Migrations
                     PhoneNumber = table.Column<string>(type: "nvarchar(11)", maxLength: 11, nullable: false),
                     Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Discriminator = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CompanyNo = table.Column<int>(type: "int", maxLength: 4, nullable: true),
-                    RegistrationCode = table.Column<int>(type: "int", maxLength: 4, nullable: true),
-                    EconomicCode = table.Column<int>(type: "int", maxLength: 4, nullable: true),
+                    CompanyNo = table.Column<string>(type: "nvarchar(4)", maxLength: 4, nullable: true),
+                    RegistrationCode = table.Column<string>(type: "nvarchar(4)", maxLength: 4, nullable: true),
+                    EconomicCode = table.Column<string>(type: "nvarchar(4)", maxLength: 4, nullable: true),
                     NationalCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
@@ -188,22 +188,23 @@ namespace Accounting.WebAPI.Migrations
                     FatherName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Age = table.Column<int>(type: "int", nullable: true),
                     BirthPlaceId = table.Column<int>(type: "int", nullable: true),
-                    NationalityId = table.Column<int>(type: "int", nullable: true)
+                    NationalityId = table.Column<int>(type: "int", nullable: true),
+                    NationalityId1 = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_People", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_People_Lookups_BirthPlaceId",
-                        column: x => x.BirthPlaceId,
-                        principalTable: "Lookups",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_People_Lookups_NationalityId",
                         column: x => x.NationalityId,
                         principalTable: "Lookups",
                         principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_People_Lookups_NationalityId1",
+                        column: x => x.NationalityId1,
+                        principalTable: "Lookups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -260,6 +261,15 @@ namespace Accounting.WebAPI.Migrations
                 });
 
             migrationBuilder.InsertData(
+                table: "AspNetRoles",
+                columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
+                values: new object[,]
+                {
+                    { "5fb40604-a4e4-4b2e-aebe-f87bd23e3206", "5bed8d6c-61e9-4c92-b7c0-d50759535c20", "User", "USER" },
+                    { "bf49eaf4-d0e8-4aef-9f9d-23396c15f661", "11a6ff21-5197-46aa-902a-91197df5cd97", "Administrator", "ADMINISTRATOR" }
+                });
+
+            migrationBuilder.InsertData(
                 table: "Lookups",
                 columns: new[] { "Id", "LookupTypeId", "Title" },
                 values: new object[,]
@@ -276,19 +286,19 @@ namespace Accounting.WebAPI.Migrations
 
             migrationBuilder.InsertData(
                 table: "People",
-                columns: new[] { "Id", "Address", "Age", "BirthDate", "BirthPlaceId", "Discriminator", "Email", "FatherName", "FirstName", "LastName", "NationalCode", "NationalityId", "PhoneNumber" },
+                columns: new[] { "Id", "Address", "Age", "BirthDate", "BirthPlaceId", "Discriminator", "Email", "FatherName", "FirstName", "LastName", "NationalCode", "NationalityId", "NationalityId1", "PhoneNumber" },
                 values: new object[,]
                 {
-                    { 2, "Tehran", 20, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 5, "RealPerson", "tehraniAli480", "Kamal", "Ali", "Tehrani", "1234567890", 3, "09171619993" },
-                    { 3, "Abadan", 15, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 5, "RealPerson", "sdlksdkvnksnv", "Ali", "Reza", "Bogari", "0440799996", 3, "09174856699" },
-                    { 7, "Karaj", 45, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 5, "RealPerson", "tehranimohammad480", "Ali", "Ahmad Reza", "Tehrani", "4565654568", 3, "01478745454" },
-                    { 1, "Karaj", 10, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 6, "RealPerson", "tehranimohammad480", "Ali", "Mohammad Reza", "Tehrani", "0440799996", 3, "09177973283" },
-                    { 4, "Tehran", 47, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 6, "RealPerson", "tehraniAli480", "Kamal", "Mahyar", "Bogari", "2546845865", 3, "01478747879" },
-                    { 8, "Tehran", 20, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 6, "RealPerson", "tehraniAli480", "Kamal", "Ali", "Tehrani", "1234567890", 3, "09171619993" },
-                    { 5, "Karaj", 14, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 7, "RealPerson", "tehranimohammad480", "Ali", "Mohammad Reza", "Tehrani", "147569874", 3, "01478954789" },
-                    { 9, "Karaj", 25, new DateTime(1788, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 7, "RealPerson", "djjfgodf", "Parsa", "Mohammad Ali", "Tehrani", "1578947524", 4, "01478954758" },
-                    { 6, "Tehran", 12, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 8, "RealPerson", "rggrg", "Kamal", "Ali", "Tehrani", "9898989745", 3, "01236987474" },
-                    { 10, "Tehran", 16, new DateTime(1975, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 8, "RealPerson", "tehraniAli480", "Akbar", "Asghar", "Bogari", "1475369514", 4, "09171619993" }
+                    { 1, "Karaj", 10, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 6, "RealPerson", "tehranimohammad480", "Ali", "Mohammad Reza", "Tehrani", "0440799996", 3, null, "09177973283" },
+                    { 2, "Tehran", 20, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 5, "RealPerson", "tehraniAli480", "Kamal", "Ali", "Tehrani", "1234567890", 3, null, "09171619993" },
+                    { 3, "Abadan", 15, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 5, "RealPerson", "sdlksdkvnksnv", "Ali", "Reza", "Bogari", "0440799996", 3, null, "09174856699" },
+                    { 4, "Tehran", 47, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 6, "RealPerson", "tehraniAli480", "Kamal", "Mahyar", "Bogari", "2546845865", 3, null, "01478747879" },
+                    { 5, "Karaj", 14, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 7, "RealPerson", "tehranimohammad480", "Ali", "Mohammad Reza", "Tehrani", "147569874", 3, null, "01478954789" },
+                    { 6, "Tehran", 12, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 8, "RealPerson", "rggrg", "Kamal", "Ali", "Tehrani", "9898989745", 3, null, "01236987474" },
+                    { 7, "Karaj", 45, new DateTime(1997, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 5, "RealPerson", "tehranimohammad480", "Ali", "Ahmad Reza", "Tehrani", "4565654568", 3, null, "01478745454" },
+                    { 8, "Tehran", 20, new DateTime(1985, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 6, "RealPerson", "tehraniAli480", "Kamal", "Ali", "Tehrani", "1234567890", 3, null, "09171619993" },
+                    { 9, "Karaj", 25, new DateTime(1788, 3, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), 7, "RealPerson", "djjfgodf", "Parsa", "Mohammad Ali", "Tehrani", "1578947524", 4, null, "01478954758" },
+                    { 10, "Tehran", 16, new DateTime(1975, 5, 12, 0, 0, 0, 0, DateTimeKind.Unspecified), 8, "RealPerson", "tehraniAli480", "Akbar", "Asghar", "Bogari", "1475369514", 4, null, "09171619993" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -351,14 +361,14 @@ namespace Accounting.WebAPI.Migrations
                 column: "PersonId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_People_BirthPlaceId",
-                table: "People",
-                column: "BirthPlaceId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_People_NationalityId",
                 table: "People",
                 column: "NationalityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_People_NationalityId1",
+                table: "People",
+                column: "NationalityId1");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

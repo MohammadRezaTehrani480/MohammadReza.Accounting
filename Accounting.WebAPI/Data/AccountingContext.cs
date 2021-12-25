@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 namespace Accounting.WebAPI.Data
 {
     /*So this just another class that allows us to take advantages of identity services*/
+    //because we want to integrate our context with Identity
     public class AccountingContext : IdentityDbContext<ApiUser>
     {
         public AccountingContext(DbContextOptions<AccountingContext> options) : base(options)
@@ -23,6 +24,7 @@ namespace Accounting.WebAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            /*This is required for migration to work properly*/
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<RealPerson>();

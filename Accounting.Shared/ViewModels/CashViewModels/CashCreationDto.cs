@@ -11,7 +11,9 @@ namespace Accounting.Shared.ViewModels.CashViewModels
     public class CashCreationDTO
     {
         [Required(ErrorMessage = "Cash name is a required field.")]
-        [MaxLength(30, ErrorMessage = "Maximum length for the cash name is 20 characters.")]
+        [MaxLength(20, ErrorMessage = "Maximum length for the cash name is 20 characters.")]
         public string CashName { get; set; }
+
+        public int RealPersonId { get; set; }
     }
 }

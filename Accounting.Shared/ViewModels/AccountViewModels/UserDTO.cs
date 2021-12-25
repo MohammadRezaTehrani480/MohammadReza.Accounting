@@ -15,5 +15,7 @@ namespace Accounting.Shared.ViewModels.AccountViewModels
         [Required]
         [DataType(DataType.PhoneNumber)]
         public string PhoneNumber { get; set; }
+
+        public ICollection<String> Roles { get; set; }
     }
 }

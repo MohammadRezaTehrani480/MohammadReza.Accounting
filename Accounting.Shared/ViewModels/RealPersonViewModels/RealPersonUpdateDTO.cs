@@ -7,11 +7,8 @@ using System.Threading.Tasks;
 
 namespace Accounting.Shared.ViewModels.RealPersonViewModels
 {
-    public class RealPersonDTO : RealPersonCreationDTO
+    public class RealPersonUpdateDTO : RealPersonCreationDTO
     {
-        public int Id { get; set; }
-        public LookupDTO BirthPlace { get; set; }
-        public LookupDTO Nationality { get; set; }
-        public IList<CashDTO> Cashes { get; set; }
+        public IList<CashCreationDTO> Cashes { get; set; }
     }
 }

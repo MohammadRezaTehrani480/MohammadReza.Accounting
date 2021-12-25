@@ -7,8 +7,8 @@ namespace Accounting.WebAPI.Entities
 {
     public class LegalPerson : Person
     {
-        public int CompanyNo { get; set; }
-        public int RegistrationCode { get; set; }
-        public int EconomicCode { get; set; }
+        public string CompanyNo { get; set; }
+        public string RegistrationCode { get; set; }
+        public string EconomicCode { get; set; }
     }
 }

@@ -13,7 +13,7 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
         public void Configure(EntityTypeBuilder<Document> builder)
         {
             builder.Property(x => x.Amount)
-                                    .IsRequired();
+                   .IsRequired();
 
             builder.Property(x => x.Date)
                     .IsRequired();
@@ -22,10 +22,13 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                     .IsRequired()
                     .HasMaxLength(20);
 
-            //builder.Property(x => x.DocType)
-            //        .IsRequired();
-
             builder.Property(x => x.DocTypeId)
+                    .IsRequired();
+
+            builder.Property(x => x.PersonId)
+                    .IsRequired();
+
+            builder.Property(x => x.CashId)
                     .IsRequired();
         }
     }

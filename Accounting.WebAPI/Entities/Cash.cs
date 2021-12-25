@@ -10,8 +10,7 @@ namespace Accounting.WebAPI.Entities
         public string CashName { get; set; }
         //==================================================
         public int RealPersonId { get; set; }
-        public virtual RealPerson Cashier { get; set; }
+        public virtual RealPerson RealPerson { get; set; }
         public virtual ICollection<Document> Documents { get; set; }
-
     }
 }

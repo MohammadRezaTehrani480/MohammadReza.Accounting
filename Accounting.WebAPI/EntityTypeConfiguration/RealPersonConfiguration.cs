@@ -36,14 +36,9 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                    .IsRequired();
 
             builder.HasMany(r => r.Cashes)
-                    .WithOne(c => c.Cashier)
+                    .WithOne(c => c.RealPerson)
                     .HasForeignKey(x => x.RealPersonId)
                     .OnDelete(DeleteBehavior.Cascade);
-
-            builder.HasOne(x => x.Nationality)
-                    .WithMany()
-                    .HasForeignKey(f => f.NationalityId)
-                    .OnDelete(DeleteBehavior.NoAction);
 
             //=====================================================
 
@@ -63,7 +58,7 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                     BirthDate = new DateTime(1997, 03, 14),
                     FatherName = "Ali",
                     NationalityId = 3,
-                    Age=10
+                    Age = 10
                 });
 
             builder.HasData(
@@ -80,7 +75,7 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                     BirthDate = new DateTime(1985, 05, 12),
                     FatherName = "Kamal",
                     NationalityId = 3,
-                    Age=20
+                    Age = 20
                 });
             builder.HasData(
                 new RealPerson
@@ -97,7 +92,7 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                     FatherName = "Ali",
                     NationalityId = 3,
                     Age = 15
-                }) ;
+                });
 
             builder.HasData(
                 new RealPerson
@@ -113,7 +108,7 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                     BirthDate = new DateTime(1985, 05, 12),
                     FatherName = "Kamal",
                     NationalityId = 3,
-                    Age=47
+                    Age = 47
                 });
             builder.HasData(
                 new RealPerson

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using X.PagedList;
 
 namespace Accounting.WebAPI.Data.Base
 {
@@ -87,7 +88,7 @@ namespace Accounting.WebAPI.Data.Base
             /*Check if you have it already , check is there any difference , so the EF core statrs tracking to see that there are certain fields
              that are different so these are two different records*/
             DbSet.Attach(entity);
-            /*Once we tell it that it has been modified then it will knot that is ok I need to do an update to it*/
+            /*Once we tell it that it has been modified then it will know that is ok I need to do an update to it*/
             AccountingContext.Entry(entity).State = EntityState.Modified;
         }
 
@@ -138,6 +139,20 @@ namespace Accounting.WebAPI.Data.Base
         public async Task InsertRange(IEnumerable<T> entities)
         {
             await DbSet.AddRangeAsync(entities);
+        }
+
+        public async Task<IPagedList<T>> GetAllUdemyPagingAsync(RequestParams requestParams,List<string> includes = null)
+        {
+            IQueryable<T> query = DbSet;
+
+            if (includes != null)
+            {
+                foreach (var includeProperty in includes)
+                {
+                    query = query.Include(includeProperty);
+                }
+            }
+            return await query.AsNoTracking().ToPagedListAsync(requestParams.PageNumber, requestParams.PageSize);
         }
     }
 }

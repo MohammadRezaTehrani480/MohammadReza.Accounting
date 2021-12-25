@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 using Infrastructure;
 using Accounting.WebAPI.Data;
 using AutoMapper;
-using Accounting.WebAPI.Contracts;
 using Accounting.Shared.ViewModels.DocumentsViewModels;
 using Accounting.WebAPI.Entities;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Accounting.WebAPI.Controllers
 {
@@ -26,168 +26,124 @@ namespace Accounting.WebAPI.Controllers
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetAllDocumentsAsync()
+        public async Task<IActionResult> GetAllDocumentsAsync([FromQuery] RequestParams requestParams)
         {
-            try
-            {
-                var documents = await UnitOfWork.DocumentRepository.GetAllUdemyAsync();
+            var documents = await UnitOfWork.DocumentRepository.GetAllUdemyPagingAsync(requestParams);
 
-                var documentsDTO = _mapper.Map<IList<DocumentDTO>>(documents);
+            var documentsDTO = _mapper.Map<IList<DocumentDTO>>(documents);
 
-                return Ok(documentsDTO);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Something Went Wrong in the {nameof(GetAllDocumentsAsync)}");
-                return StatusCode(500, "Internal Server Error. Please Try Again Later.");
-            }
+            return Ok(documentsDTO);
         }
 
 
-        [HttpGet(template: "{id:int}", Name = "GetDocumentAsync")]
+        [HttpGet(template: "{id:int}", Name = "GetSingelDocumentAsync")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetSingelDocumentAsync(int id)
         {
-            try
+            var document = await UnitOfWork.DocumentRepository.GetUdemyAsync(q => q.Id == id, new List<string> { "Cash", "Person", "DocType" });
+
+            if (document == null)
             {
-                var document = await UnitOfWork.DocumentRepository.GetUdemyAsync(q => q.Id == id, new List<string> { "Cash", "AccountSide", "DocType" });
-
-                if (document == null)
-                {
-                    _logger.LogError($"Document with id: {id} doesn't exist in the database.");
-                    return NotFound();
-                }
-
-                var documentDTO = _mapper.Map<DocumentDTO>(document);
-
-                return Ok(documentDTO);
+                _logger.LogError($"Document with id: {id} doesn't exist in the database.");
+                return NotFound();
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Something Went Wrong in the {nameof(GetSingelDocumentAsync)}");
-                return StatusCode(500, "Internal Server Error. Please Try Again Later.");
-            }
+
+            var documentDTO = _mapper.Map<DocumentDTO>(document);
+
+            return Ok(documentDTO);
         }
 
-        #region *
-        //[HttpPost]
-        //public async Task<IActionResult> CreateDocumentForPersonAndCashAsync([FromBody] DocumentCreationDto document)
-        //{
-        //    if (document == null)
-        //    {
-        //        _logger.LogError("DocumentForCreation object sent from client is null.");
-        //        return BadRequest("DocumentForCreation object is null");
-        //    }
+        [Authorize(Roles = "Administrator")]
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateDocument([FromBody] DocumentCreationDTO documentDTO)
+        {
+            if (documentDTO == null)
+            {
+                _logger.LogError("DocumentForCreation object sent from client is null.");
+                return BadRequest("DocumentForCreation object is null");
+            }
 
-        //    var person = await UnitOfWork.PersonRepository.GetSingelPersonAsync(document.PersonId, trackChanges: false);
+            if (!ModelState.IsValid)
+            {
+                _logger.LogError("Invalid model state for the DocumentCreationDto object");
+                return BadRequest(ModelState);
+            }
 
-        //    if (person == null)
-        //    {
-        //        _logger.LogError($"Company with id: {document.PersonId} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
+            var document = _mapper.Map<Document>(documentDTO);
 
-        //    var cash = await UnitOfWork.CashRepository.GetByIdAsync(document.CashId);
+            await UnitOfWork.DocumentRepository.InsertAsync(document);
 
-        //    if (cash == null)
-        //    {
-        //        _logger.LogError($"Cash with id: {document.CashId} doesn't exist in the database.");
+            await UnitOfWork.SaveAsync();
 
-        //        return NotFound();
-        //    }
+            return CreatedAtRoute("GetSingelDocumentAsync", new { id = document.Id }, document);
+        }
 
-        //    var documentEntity = _mapper.Map<Document>(document);
+        [Authorize]
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateDocumentAsync(int id, [FromBody] DocumentUpdateDTO documentDTO)
+        {
+            if (documentDTO == null)
+            {
+                _logger.LogError("DocumentForUpdate object sent from client is null.");
+                return BadRequest("DocumentForUpdate object is null");
+            }
 
-        //    await UnitOfWork.DocumentRepository.CreateDocumentForPersonAndCashAsync(documentEntity);
+            if (!ModelState.IsValid || id < 1)
+            {
+                _logger.LogError("Invalid model state for the DocumentUpdateDto object");
+                return BadRequest(ModelState);
+            }
 
-        //    await UnitOfWork.SaveAsync();
+            var document = await UnitOfWork.DocumentRepository.GetUdemyAsync(q => q.Id == id);
 
-        //    var documentToReturn = _mapper.Map<DocumentDTO>(documentEntity);
+            if (document == null)
+            {
+                _logger.LogError($"Document with id: {id} doesn't exist in the database.");
+                return BadRequest("Submitted data is invalid!");
+            }
 
-        //    return Ok(value: documentToReturn);
+            _mapper.Map(documentDTO, document);
 
-        //    //return CreatedAtRoute("GetDocumentForPersonAndCash", new { document.PersonId, id = documentToReturn.Id }, documentToReturn);
-        //}
+            UnitOfWork.DocumentRepository.Update(document);
 
+            await UnitOfWork.SaveAsync();
 
-        //[HttpDelete(template: "{id}/people/{personId}/cashes/{cashId}")]
-        //public async Task<IActionResult> DeleteDocumentForPersonAndCashAsync(int personId, int cashId, int id)
-        //{
-        //    var person = await UnitOfWork.PersonRepository.GetSingelPersonAsync(personId, trackChanges: false);
+            return NoContent();
+        }
 
-        //    if (person == null)
-        //    {
-        //        _logger.LogError($"Company with id: {personId} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteDocumentAsync(int id)
+        {
+            if (id < 1)
+            {
+                _logger.LogError($"Document with Id: {id} does not exist in the database!");
 
-        //    var cash = await UnitOfWork.CashRepository.GetSingelCashAsync(personId, cashId, trackChanges: false);
+                return BadRequest();
+            }
 
-        //    if (cash == null)
-        //    {
-        //        _logger.LogError($"Cash with id: {cashId} doesn't exist in the database.");
+            var document = await UnitOfWork.DocumentRepository.GetUdemyAsync(q => q.Id == id);
+            if (document == null)
+            {
+                _logger.LogError($"Invalid DELETE attempt in {nameof(DeleteDocumentAsync)}");
+                return BadRequest("Submitted data is invalid");
+            }
 
-        //        return NotFound();
-        //    }
+            await UnitOfWork.DocumentRepository.DeleteByIdAsync(id);
+            await UnitOfWork.SaveAsync();
 
-        //    var documentForPersonAndCash = await UnitOfWork.DocumentRepository.GetSingelDocumentAsync(personId, cashId, id, trackChanges: false);
-
-        //    if (documentForPersonAndCash == null)
-        //    {
-        //        _logger.LogError($"Cash with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-
-        //    await UnitOfWork.DocumentRepository.DeleteDocumentAsync(documentForPersonAndCash);
-
-        //    await UnitOfWork.SaveAsync();
-
-        //    return NoContent();
-        //}
-
-
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateDocumentForPersonAndCashAsync([FromQuery] int id, [FromBody] DocumentUpdateDto document)
-        //{
-        //    if (document == null)
-        //    {
-        //        _logger.LogError("DocumentForUpdate object sent from client is null.");
-        //        return BadRequest("DocumentForUpdate object is null");
-        //    }
-
-        //    var person = await UnitOfWork.PersonRepository.GetSingelPersonAsync(document.PersonId, trackChanges: false);
-
-        //    if (person == null)
-        //    {
-        //        _logger.LogError($"Company with id: {document.PersonId} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-
-        //    var cash = await UnitOfWork.CashRepository.GetByIdAsync(document.CashId);
-
-        //    if (cash == null)
-        //    {
-        //        _logger.LogError($"Cash with id: {document.CashId} doesn't exist in the database.");
-
-        //        return NotFound();
-        //    }
-
-        //    var documentEntity = await UnitOfWork.DocumentRepository.GetByIdAsync(id);
-
-        //    if (documentEntity == null)
-        //    {
-        //        _logger.LogError($"Document with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-
-        //    _mapper.Map(document, documentEntity);
-
-        //    await UnitOfWork.SaveAsync();
-
-        //    return NoContent();
-        //}
-        #endregion *
+            return NoContent();
+        }
     }
 }
 

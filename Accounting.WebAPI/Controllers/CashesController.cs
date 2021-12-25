@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 using Infrastructure;
 using Accounting.WebAPI.Data;
 using AutoMapper;
-using Accounting.WebAPI.Contracts;
 using Accounting.Shared.ViewModels.CashViewModels;
 using Accounting.WebAPI.Entities;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Accounting.WebAPI.Controllers
 {
@@ -27,148 +27,121 @@ namespace Accounting.WebAPI.Controllers
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetAllCashesAsync()
+        public async Task<IActionResult> GetAllCashesAsync([FromQuery] RequestParams requestParams)
         {
-            try
-            {
-                var cashes = await UnitOfWork.CashRepository.GetAllAsync();
-                var cashesDTO = _mapper.Map<IList<CashDTO>>(cashes);
-                return Ok(cashesDTO);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Something Went Wrong in the {nameof(GetAllCashesAsync)}");
-                return StatusCode(500, "Internal Server Error. Please Try Again Later.");
-            }
+            var cashes = await UnitOfWork.CashRepository.GetAllUdemyPagingAsync(requestParams);
+            var cashesDTO = _mapper.Map<IList<CashDTO>>(cashes);
+            return Ok(cashesDTO);
         }
 
 
-        [HttpGet("{id:int}", Name = "GetCashForRealPerson")]
+        [HttpGet("{id:int}", Name = "GetSingelCashAsync")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetSingelCashAsync(int id)
         {
-            try
+            var cash = await UnitOfWork.CashRepository.GetUdemyAsync(q => q.Id == id, new List<string> { "Documents", "RealPerson" });
+
+            if (cash == null)
             {
-                var cash = await UnitOfWork.CashRepository.GetUdemyAsync(q => q.Id == id, new List<string> { "Documents", "Cashier" });
-
-                if (cash == null)
-                {
-                    _logger.LogError($"Cash with id: {id} doesn't exist in the database.");
-                    return NotFound();
-                }
-
-                var cashDTO = _mapper.Map<CashDTO>(cash);
-
-                return Ok(cashDTO);
+                _logger.LogError($"Cash with id: {id} doesn't exist in the database.");
+                return NotFound();
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Something Went Wrong in the {nameof(GetSingelCashAsync)}");
-                return StatusCode(500, "Internal Server Error. Please Try Again Later.");
-            }
+
+            var cashDTO = _mapper.Map<CashDTO>(cash);
+
+            return Ok(cashDTO);
         }
 
-        #region * 
-        //[HttpPost]
-        //public async Task<IActionResult> CreateCashForRealPersonAsync(int realPersonId, [FromBody] CashCreationDTO cash, bool eager = false)
-        //{
-        //    if (cash == null)
-        //    {
-        //        _logger.LogError("CashForCreationDto object sent from client is null.");
-        //        return BadRequest("CashForCreationDto object is null");
-        //    }
+        [Authorize(Roles = "Administrator")]
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateCashAsync([FromBody] CashCreationDTO cashDTO)
+        {
+            if (cashDTO == null)
+            {
+                _logger.LogError("CashForCreationDto object sent from client is null.");
+                return BadRequest("CashForCreationDto object is null");
+            }
 
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the CashCreationDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
+            if (!ModelState.IsValid)
+            {
+                _logger.LogError("Invalid model state for the CashCreationDto object");
+                return BadRequest(ModelState);
+            }
 
-        //    var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonAsync(realPersonId, eager: eager);
+            var cash = _mapper.Map<Cash>(cashDTO);
 
-        //    if (realPerson == null)
-        //    {
-        //        _logger.LogError($"Company with id: {realPersonId} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
+            await UnitOfWork.CashRepository.InsertAsync(cash);
 
-        //    var cashEntity = _mapper.Map<Cash>(cash);
+            await UnitOfWork.SaveAsync();
 
-        //    await UnitOfWork.CashRepository.CreateCashForRealPersonAsync(realPersonId, cashEntity);
+            return CreatedAtRoute("GetSingelCashAsync", new { id = cash.Id }, cash);
+        }
 
-        //    await UnitOfWork.SaveAsync();
+        [Authorize]
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateCashAsync(int id, [FromBody] CashUpdateDTO cashDTO)
+        {
+            if (cashDTO == null)
+            {
+                _logger.LogError("CashForUpdateDto object sent from client is null.");
+                return BadRequest("CashForUpdateDto object is null");
+            }
 
-        //    var cashToReturn = _mapper.Map<CashDTO>(cashEntity);
+            if (!ModelState.IsValid || id < 1)
+            {
+                _logger.LogError("Invalid model state for the CashUpdateDto object");
+                return BadRequest(ModelState);
+            }
 
-        //    return CreatedAtRoute("GetCashForRealPerson", new { realPersonId, id = cashToReturn.Id }, cashToReturn);
-        //}
+            var cash = await UnitOfWork.CashRepository.GetUdemyAsync(q => q.Id == id);
 
+            if (cash == null)
+            {
+                _logger.LogError($"Cash with id: {id} doesn't exist in the database.");
+                return BadRequest("Submitted data is invalid!");
+            }
 
-        //[HttpDelete("{id}")]
-        //public async Task<IActionResult> DeleteCashForRealPersonAsync(int realPersonId, int id, bool eager = false)
-        //{
-        //    var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonAsync(realPersonId, eager: eager);
+            _mapper.Map(cashDTO, cash);
 
-        //    if (realPerson == null)
-        //    {
-        //        _logger.LogError($"RealPerson with id: {realPerson} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
+            UnitOfWork.CashRepository.Update(cash);
 
-        //    var cashForRealPerson = await UnitOfWork.CashRepository.GetSingelCashAsync(realPersonId, id, trackChanges: false);
+            await UnitOfWork.SaveAsync();
 
-        //    if (cashForRealPerson == null)
-        //    {
-        //        _logger.LogError($"Cash with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
+            return NoContent();
+        }
 
-        //    await UnitOfWork.CashRepository.DeleteCashAsync(cashForRealPerson);
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteCashAsync(int id)
+        {
+            if (id < 1)
+            {
+                _logger.LogError($"Cash with Id: {id} does not exist in the database!");
 
-        //    await UnitOfWork.SaveAsync();
+                return BadRequest();
+            }
 
-        //    return NoContent();
-        //}
+            var cash = await UnitOfWork.CashRepository.GetUdemyAsync(q => q.Id == id);
+            if (cash == null)
+            {
+                _logger.LogError($"Invalid DELETE attempt in {nameof(DeleteCashAsync)}");
+                return BadRequest("Submitted data is invalid");
+            }
 
+            await UnitOfWork.CashRepository.DeleteByIdAsync(id);
+            await UnitOfWork.SaveAsync();
 
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateCashForRealPersonAsync(int realPersonId, int id, [FromBody] CashUpdateDto cash, bool eager = false)
-        //{
-        //    if (cash == null)
-        //    {
-        //        _logger.LogError("CashForUpdateDto object sent from client is null.");
-        //        return BadRequest("CashForUpdateDto object is null");
-        //    }
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the CashUpdateDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
-
-        //    var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonAsync(realPersonId, eager: eager);
-
-        //    if (realPerson == null)
-        //    {
-        //        _logger.LogError($"RealPerson with id: {realPersonId} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-
-        //    var cashEntity = await UnitOfWork.CashRepository.GetSingelCashAsync(realPersonId, id, trackChanges: true);
-
-        //    if (cashEntity == null)
-        //    {
-        //        _logger.LogError($"Cash with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-
-        //    _mapper.Map(cash, cashEntity);
-
-        //    await UnitOfWork.SaveAsync();
-
-        //    return NoContent();
-        //}
-        #endregion *
+            return NoContent();
+        }
     }
 }

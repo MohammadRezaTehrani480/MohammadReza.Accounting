@@ -9,12 +9,14 @@ using Accounting.WebAPI.Enum;
 using Infrastructure;
 using AutoMapper;
 using Accounting.Shared.ViewModels;
-using Accounting.WebAPI.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using Accounting.Shared.ViewModels.LookupViewModels;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Accounting.WebAPI.Controllers
 {
+    [ApiExplorerSettings(GroupName = "v1")]
     public class LookupsController : BaseApiControllerWithDatabase
     {
         public LookupsController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<LookupsController> logger) : base(unitOfWork, mapper)
@@ -25,128 +27,127 @@ namespace Accounting.WebAPI.Controllers
         private readonly ILogger<LookupsController> _logger;
 
         [HttpGet]
-        public async Task<IActionResult> GetAllLookupsAsync()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllLookupsAsync([FromQuery] RequestParams requestParams)
         {
-            try
-            {
-                var lookups = await UnitOfWork.LookupRepository.GetAllUdemyAsync();
+            var lookups = await UnitOfWork.LookupRepository.GetAllUdemyPagingAsync(requestParams);
 
-                var lookupsDTO = _mapper.Map<IEnumerable<LookupDTO>>(lookups);
+            var lookupsDTO = _mapper.Map<IEnumerable<LookupDTO>>(lookups);
 
-                return Ok(value: lookupsDTO);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Something went wrong in the {nameof(GetAllLookupsAsync)} action {ex}");
-
-                return StatusCode(500, "Internal server error!");
-            }
+            return Ok(value: lookupsDTO);
         }
 
-
-        [HttpGet("{id}", Name = "LookupById")]
+        [HttpGet("{id}", Name = "GetSingelLookupAsync")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetSingelLookupAsync(int id)
         {
-            try
-            {
-                var lookup = await UnitOfWork.LookupRepository.GetUdemyAsync(q => q.Id == id);
+            var lookup = await UnitOfWork.LookupRepository.GetUdemyAsync(q => q.Id == id);
 
-                if (lookup == null)
-                {
-                    _logger.LogError($"Lookup with id: {id} doesn't exist in the database.");
-                    return NotFound();
-                }
-                else
-                {
-                    var lookupDTO = _mapper.Map<LookupDTO>(lookup);
-                    return Ok(lookupDTO);
-                }
+            if (lookup == null)
+            {
+                _logger.LogError($"Lookup with id: {id} doesn't exist in the database.");
+                return NotFound();
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError($"Something went wrong in the {nameof(GetSingelLookupAsync)} action {ex}");
-
-                return StatusCode(500, "Internal server error!");
+                var lookupDTO = _mapper.Map<LookupDTO>(lookup);
+                return Ok(lookupDTO);
             }
         }
 
-        #region *
-        //[HttpPost]
-        //public async Task<IActionResult> CreateLookupAsync([FromBody] LookupCreationDTO lookup)
-        //{
-        //    if (lookup == null)
-        //    {
-        //        _logger.LogError("LookupCreationViewModel object sent from client is null.");
+        [Authorize(Roles = "Administrator")]
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateLookupAsync([FromBody] LookupCreationDTO lookupDTO)
+        {
+            if (lookupDTO == null)
+            {
+                _logger.LogError("LookupCreationViewModel object sent from client is null.");
 
-        //        return BadRequest("LookupCreationViewModel object is null");
-        //    }
+                return BadRequest("LookupCreationViewModel object is null");
+            }
 
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the LookupCreationDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
+            if (!ModelState.IsValid)
+            {
+                _logger.LogError("Invalid model state for the LookupCreationDto object");
+                return BadRequest(ModelState);
+            }
 
-        //    var lookupResult = _mapper.Map<Lookup>(lookup);
+            var lookup = _mapper.Map<Lookup>(lookupDTO);
 
-        //    await UnitOfWork.LookupRepository.InsertAsync(lookupResult);
+            await UnitOfWork.LookupRepository.InsertAsync(lookup);
 
-        //    await UnitOfWork.SaveAsync();
+            await UnitOfWork.SaveAsync();
 
-        //    var lookupToReturn = _mapper.Map<LookupDTO>(lookupResult);
+            return CreatedAtRoute("GetSingelLookupAsync", new { id = lookup.Id }, lookup);
+        }
 
-        //    return CreatedAtRoute("LookupById", new { id = lookupToReturn.Id }, lookupToReturn);
-        //}
+        [Authorize]
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateLookupAsync(int id, [FromBody] LookupUpdateDTO lookupUpdateDTO)
+        {
+            if (lookupUpdateDTO == null)
+            {
+                _logger.LogError("LookupUpdateViewModel object sent from client is null.");
+                return BadRequest("LookupUpdateViewModel object is null");
+            }
+
+            if (!ModelState.IsValid || id < 1)
+            {
+                _logger.LogError("Invalid model state for the LookupUpdateViewModel object");
+                return BadRequest(ModelState);
+            }
+
+            var lookup = await UnitOfWork.LookupRepository.GetUdemyAsync(q => q.Id == id);
+            if (lookup == null)
+            {
+                _logger.LogError("Invalid model state for the LookupPersonUpdateDto object");
+                return BadRequest("Submitted data is invalid!");
+            }
+
+            _mapper.Map(lookupUpdateDTO, lookup);
+
+            UnitOfWork.LookupRepository.Update(lookup);
+
+            await UnitOfWork.SaveAsync();
+
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteLookupAsync(int id)
+        {
+            if (id < 1)
+            {
+                _logger.LogError($"Lookup with Id: {id} does not exist in the database!");
+
+                return BadRequest();
+            }
 
 
-        //[HttpDelete]
-        //public async Task<IActionResult> DeleteLookupAsync(int id)
-        //{
-        //    if (id <= 0)
-        //    {
-        //        _logger.LogError($"Lookup with Id: {id} does not exist in the database!");
+            var lookup = await UnitOfWork.LookupRepository.GetUdemyAsync(q => q.Id == id);
+            if (lookup == null)
+            {
+                _logger.LogError($"Invalid DELETE attempt in {nameof(DeleteLookupAsync)}");
+                return BadRequest("Submitted data is invalid");
+            }
 
-        //        return NotFound();
-        //    }
+            await UnitOfWork.LookupRepository.DeleteByIdAsync(id);
+            await UnitOfWork.SaveAsync();
 
-        //    await UnitOfWork.LookupRepository.DeleteByIdAsync(id);
-
-        //    await UnitOfWork.SaveAsync();
-
-        //    return NoContent();
-        //}
-
-
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateLookupAsync(int id, [FromBody] LookupUpdateDto lookup)
-        //{
-        //    if (lookup == null)
-        //    {
-        //        _logger.LogError("LookupUpdateViewModel object sent from client is null.");
-        //        return BadRequest("LookupUpdateViewModel object is null");
-        //    }
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the LookupUpdateDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
-
-        //    var lookupEntity = await UnitOfWork.LookupRepository.GetLookupAsync(id, trackChanges: true);
-
-        //    if (lookupEntity == null)
-        //    {
-        //        _logger.LogError($"Lookup with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-
-        //    _mapper.Map(lookup, lookupEntity);
-
-        //    await UnitOfWork.SaveAsync();
-
-        //    return NoContent();
-        //}
-        #endregion *
+            return NoContent();
+        }
     }
 }
 

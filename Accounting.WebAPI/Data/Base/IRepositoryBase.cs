@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using X.PagedList;
 
 namespace Accounting.WebAPI.Data.Base
 {
@@ -38,5 +39,10 @@ namespace Accounting.WebAPI.Data.Base
          );
 
         Task<T> GetUdemyAsync(Expression<Func<T, bool>> expression, List<string> includes = null);
+
+        Task<IPagedList<T>> GetAllUdemyPagingAsync(
+            RequestParams requestParams,
+           List<string> includes = null
+        );
     }
 }

@@ -10,7 +10,7 @@ namespace Accounting.WebAPI.Entities
     {
         public string Title { get; set; }
         public int LookupTypeId { get; set; }
-        public ICollection<RealPerson> RealPeople { get; set; }
-        public ICollection<Document> Documents { get; set; }
+        public virtual ICollection<RealPerson> RealPeople { get; set; }
+        public virtual ICollection<Document> Documents { get; set; }
     }
 }

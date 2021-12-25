@@ -6,12 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Accounting.Shared.ViewModels.CashViewModels
+namespace Accounting.Shared.ViewModels.LookupViewModels
 {
-    public class CashDTO : CashCreationDTO
+    public class LookupUpdateDTO : LookupCreationDTO
     {
-        public int Id { get; set; }
-        public RealPersonDTO RealPerson { get; set; }
-        public IList<DocumentDTO> Documents { get; set; }
     }
 }

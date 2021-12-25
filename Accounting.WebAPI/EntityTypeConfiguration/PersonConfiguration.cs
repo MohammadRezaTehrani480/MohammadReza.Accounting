@@ -19,14 +19,6 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                     .IsUnicode()
                     .IsRequired();
 
-            //builder.HasDiscriminator(p => p.Discriminator)
-            //        .HasValue<RealPerson>(nameof(RealPerson))
-            //        .HasValue<LegalPerson>(nameof(LegalPerson));
-
-            //builder.Property(person => person.Discriminator)
-            //        .HasColumnName("Person_Type")
-            //        .HasMaxLength(12);
-
             builder.Property(p => p.PhoneNumber)
                     .HasMaxLength(11)
                     .IsUnicode()
@@ -38,7 +30,7 @@ namespace Accounting.WebAPI.EntityTypeConfiguration
                     .IsRequired();
 
             builder.HasMany(current => current.Documents)
-                    .WithOne(d => d.AccountSide)
+                    .WithOne(d => d.Person)
                     .HasForeignKey(f => f.PersonId)
                     .OnDelete(DeleteBehavior.NoAction);
         }

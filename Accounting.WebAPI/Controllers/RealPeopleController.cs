@@ -1,6 +1,5 @@
 ﻿using Accounting.Shared.ViewModels;
 using Accounting.Shared.ViewModels.RealPersonViewModels;
-using Accounting.WebAPI.Contracts;
 using Accounting.WebAPI.Data;
 using Accounting.WebAPI.Entities;
 using AutoMapper;
@@ -15,141 +14,155 @@ using Accounting.WebAPI.Extensions;
 using System.Linq.Expressions;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
+using Accounting.WebAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Accounting.WebAPI.Controllers
 {
+    /*We have to mention that this cache rule will apply to all
+     * the actions inside the controller except the ones that already
+     * have the ResponseCache atribute applied.*/
+    //[ResponseCache(CacheProfileName = "120SecondsDuration")]
     public class RealPeopleController : BaseApiControllerWithDatabase
     {
-        public RealPeopleController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<RealPeopleController> logger) : base(unitOfWork, mapper)
+        public RealPeopleController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<RealPeopleController> logger, IAuthManager authManager) : base(unitOfWork, mapper)
         {
             _logger = logger;
+            _authManager = authManager;
         }
 
         private readonly ILogger<RealPeopleController> _logger;
+        private readonly IAuthManager _authManager;
 
+
+        
         [HttpGet]
-        public async Task<IActionResult> GetAllRealPeoplePersonAsync()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllRealPeoplePersonAsync([FromQuery] RequestParams requestParams)
         {
-            try
-            {
-                var realPeople = await UnitOfWork.PersonRepository.GetAllRealPeopleUdemyAsync();
+            var realPeople = await UnitOfWork.PersonRepository.GetAllRealPeopleUdemyPagingAsync(requestParams);
 
-                var realPeopleDTO = _mapper.Map<IList<RealPersonDTO>>(realPeople);
+            var realPeopleDTO = _mapper.Map<IList<RealPersonDTO>>(realPeople);
 
-                return Ok(value: realPeopleDTO);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Something went wrong in the {nameof(GetAllRealPeoplePersonAsync)} action {ex}");
-
-                return StatusCode(500, "Internal Server Error. Please Try Again Later!");
-            }
+            return Ok(value: realPeopleDTO);
         }
 
-
-        [HttpGet("{id:int}", Name = "realpersonbyid")]
+        [HttpGet("{id:int}", Name = "GetSingelRealPersonAsync")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetSingelRealPersonAsync(int id)
         {
-            try
-            {
-                var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonUdemyAsync(q => q.Id == id, new List<string> { "Cashes", "BirthPlace", "Nationality" });
+            var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonUdemyAsync(q => q.Id == id, new List<string> { "Cashes", "BirthPlace", "Nationality" });
 
-                if (realPerson == null)
-                {
-                    _logger.LogError($"realperson with id: {id} doesn't exist in the database.");
-                    return NotFound();
-                }
-                else
-                {
-                    var realPersonDTO = _mapper.Map<RealPersonDTO>(realPerson);
-                    return Ok(realPersonDTO);
-                }
-            }
-            catch (Exception ex)
+            if (realPerson == null)
             {
-                _logger.LogError($"Something went wrong in the {nameof(GetSingelRealPersonAsync)} action {ex}");
-
-                return StatusCode(500, "Internal Server Error. Please Try Again Later!");
+                _logger.LogError($"realperson with id: {id} doesn't exist in the database.");
+                return NotFound();
             }
+            else
+            {
+                var realPersonDTO = _mapper.Map<RealPersonDTO>(realPerson);
+                return Ok(realPersonDTO);
+            }
+
         }
 
-        #region *
-        //[HttpPost]
-        //public async Task<IActionResult> CreateRealPersonAsync([FromBody] RealPersonCreationDTO realPerson)
-        //{
-        //    if (realPerson == null)
-        //    {
-        //        _logger.LogError("RealPersonCreationViewModel object sent from client is null.");
+        [Authorize(Roles = "Administrator")]
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateRealPersonAsync([FromBody] RealPersonCreationDTO realPersonDTO)
+        {
+            if (realPersonDTO == null)
+            {
+                _logger.LogError("RealPersonCreationViewModel object sent from client is null.");
 
-        //        return BadRequest("RealPersonCreationViewModel object is null");
-        //    }
+                return BadRequest("RealPersonCreationViewModel object is null");
+            }
 
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the EmployeeForCreationDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
+            if (!ModelState.IsValid)
+            {
+                _logger.LogError($"Invalid model state for the {nameof(CreateRealPersonAsync)} object");
+                return BadRequest(ModelState);
+            }
 
-        //    var realPersonResult = _mapper.Map<RealPerson>(realPerson);
+            var realPerson = _mapper.Map<RealPerson>(realPersonDTO);
 
-        //    await UnitOfWork.PersonRepository.InsertAsync(realPersonResult);
+            await UnitOfWork.PersonRepository.InsertAsync(realPerson);
 
-        //    await UnitOfWork.SaveAsync();
+            await UnitOfWork.SaveAsync();
 
-        //    var realPersonToReturn = _mapper.Map<RealPersonDTO>(realPersonResult);
+            /*The advantage of this method is in postman and in headers tap we can see the location field of this
+              record which we can use it to fetch this record*/
+            return CreatedAtRoute("GetSingelRealPersonAsync", new { id = realPerson.Id }, realPerson);
 
-        //    return CreatedAtRoute("RealPersonById", new { id = realPersonToReturn.Id }, realPersonToReturn);
-        //}
+        }
 
-
-        //[HttpDelete("{id}")]
-        //public async Task<IActionResult> DeleteRealPersonAsync(int id, bool eager = false)
-        //{
-        //    var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonAsync(id, eager: eager);
-
-        //    if (realPerson == null)
-        //    {
-        //        _logger.LogError($"RealPerson with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-        //    await UnitOfWork.PersonRepository.DeleteRealPersonAsync(realPerson);
-
-        //    await UnitOfWork.SaveAsync();
-
-        //    return NoContent();
-        //}
+        [Authorize]
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateRealPersonAsync(int id, [FromBody] RealPersonUpdateDTO realPersonDTO)
+        {
+            if (realPersonDTO == null)
+            {
+                _logger.LogError("RealPersonUpdateViewModel object sent from client is null.");
+                return BadRequest("RealPersonUpdateViewModel object is null");
+            }
 
 
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateRealPersonAsync(int id, [FromBody] RealPersonUpdateDto realPerson, bool eager = false)
-        //{
-        //    if (realPerson == null)
-        //    {
-        //        _logger.LogError("RealPersonUpdateViewModel object sent from client is null.");
-        //        return BadRequest("RealPersonUpdateViewModel object is null");
-        //    }
+            if (!ModelState.IsValid || id < 1)
+            {
+                _logger.LogError("Invalid model state for the RealPersonUpdateDTO object");
+                return BadRequest(ModelState);
+            }
 
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the RealPersonUpdateDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
+            var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonUdemyAsync(q => q.Id == id);
+            if (realPerson == null)
+            {
+                _logger.LogError("Invalid model state for the RealPersonUpdateDto object");
+                return BadRequest("Submitted data is invalid!");
+            }
 
-        //    var realPersonEntity = await UnitOfWork.PersonRepository.GetSingelRealPersonAsync(id, eager: eager);
+            _mapper.Map(realPersonDTO, realPerson);
 
-        //    if (realPersonEntity == null)
-        //    {
-        //        _logger.LogError($"RealPerson with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
+            UnitOfWork.PersonRepository.Update(realPerson);
 
-        //    _mapper.Map(realPerson, realPersonEntity);
+            await UnitOfWork.SaveAsync();
 
-        //    await UnitOfWork.SaveAsync();
+            return NoContent();
+        }
 
-        //    return NoContent();
-        //}
-        #endregion *
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteRealPersonAsync(int id)
+        {
+            if (id < 1)
+            {
+                _logger.LogError($"RealPerson with Id: {id} does not exist in the database!");
+
+                return BadRequest();
+            }
+
+            var realPerson = await UnitOfWork.PersonRepository.GetSingelRealPersonUdemyAsync(q => q.Id == id);
+            if (realPerson == null)
+            {
+                _logger.LogError($"Invalid DELETE attempt in {nameof(DeleteRealPersonAsync)}");
+                return BadRequest("Submitted data is invalid");
+            }
+
+            await UnitOfWork.PersonRepository.DeleteByIdAsync(id);
+            await UnitOfWork.SaveAsync();
+
+            return NoContent();
+        }
     }
 }
 

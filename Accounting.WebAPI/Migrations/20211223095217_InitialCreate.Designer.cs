@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Accounting.WebAPI.Migrations
 {
     [DbContext(typeof(AccountingContext))]
-    [Migration("20211220122355_Create")]
-    partial class Create
+    [Migration("20211223095217_InitialCreate")]
+    partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -280,6 +280,22 @@ namespace Accounting.WebAPI.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "5fb40604-a4e4-4b2e-aebe-f87bd23e3206",
+                            ConcurrencyStamp = "5bed8d6c-61e9-4c92-b7c0-d50759535c20",
+                            Name = "User",
+                            NormalizedName = "USER"
+                        },
+                        new
+                        {
+                            Id = "bf49eaf4-d0e8-4aef-9f9d-23396c15f661",
+                            ConcurrencyStamp = "11a6ff21-5197-46aa-902a-91197df5cd97",
+                            Name = "Administrator",
+                            NormalizedName = "ADMINISTRATOR"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -390,17 +406,18 @@ namespace Accounting.WebAPI.Migrations
                 {
                     b.HasBaseType("Accounting.WebAPI.Entities.Person");
 
-                    b.Property<int>("CompanyNo")
+                    b.Property<string>("CompanyNo")
+                        .IsRequired()
                         .HasMaxLength(4)
-                        .HasColumnType("int");
+                        .HasColumnType("nvarchar(4)");
 
-                    b.Property<int>("EconomicCode")
+                    b.Property<string>("EconomicCode")
                         .HasMaxLength(4)
-                        .HasColumnType("int");
+                        .HasColumnType("nvarchar(4)");
 
-                    b.Property<int>("RegistrationCode")
+                    b.Property<string>("RegistrationCode")
                         .HasMaxLength(4)
-                        .HasColumnType("int");
+                        .HasColumnType("nvarchar(4)");
 
                     b.HasDiscriminator().HasValue("LegalPerson");
                 });
@@ -441,9 +458,12 @@ namespace Accounting.WebAPI.Migrations
                     b.Property<int>("NationalityId")
                         .HasColumnType("int");
 
-                    b.HasIndex("BirthPlaceId");
+                    b.Property<int?>("NationalityId1")
+                        .HasColumnType("int");
 
                     b.HasIndex("NationalityId");
+
+                    b.HasIndex("NationalityId1");
 
                     b.HasDiscriminator().HasValue("RealPerson");
 
@@ -602,13 +622,13 @@ namespace Accounting.WebAPI.Migrations
 
             modelBuilder.Entity("Accounting.WebAPI.Entities.Cash", b =>
                 {
-                    b.HasOne("Accounting.WebAPI.Entities.RealPerson", "Cashier")
+                    b.HasOne("Accounting.WebAPI.Entities.RealPerson", "RealPerson")
                         .WithMany("Cashes")
                         .HasForeignKey("RealPersonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Cashier");
+                    b.Navigation("RealPerson");
                 });
 
             modelBuilder.Entity("Accounting.WebAPI.Entities.Document", b =>
@@ -625,17 +645,17 @@ namespace Accounting.WebAPI.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("Accounting.WebAPI.Entities.Person", "AccountSide")
+                    b.HasOne("Accounting.WebAPI.Entities.Person", "Person")
                         .WithMany("Documents")
                         .HasForeignKey("PersonId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("AccountSide");
-
                     b.Navigation("Cash");
 
                     b.Navigation("DocType");
+
+                    b.Navigation("Person");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -693,15 +713,13 @@ namespace Accounting.WebAPI.Migrations
                 {
                     b.HasOne("Accounting.WebAPI.Entities.Lookup", "BirthPlace")
                         .WithMany("RealPeople")
-                        .HasForeignKey("BirthPlaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("NationalityId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Accounting.WebAPI.Entities.Lookup", "Nationality")
                         .WithMany()
-                        .HasForeignKey("NationalityId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .HasForeignKey("NationalityId1");
 
                     b.Navigation("BirthPlace");
 

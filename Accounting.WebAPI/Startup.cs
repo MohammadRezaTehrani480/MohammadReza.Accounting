@@ -16,9 +16,10 @@ using Accounting.WebAPI.Enum;
 using Accounting.WebAPI.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.IO;
-using Accounting.WebAPI.Contracts;
 using Accounting.WebAPI.Mappings;
-
+using Accounting.WebAPI.Services;
+using Marvin.Cache.Headers;
+using AspNetCoreRateLimit;
 
 namespace Accounting.WebAPI
 {
@@ -37,9 +38,24 @@ namespace Accounting.WebAPI
         {
             services.ConfigureSqlContext(Configuration);
 
+            /*Cashing on our Api can significantly improve the performance of Api.When we have hundredes of clients subscribe
+            to our Api they are all trying to find realpeople and etc.that can realy take toll on the performance of Api based on the whole
+            infrastructure.So cashing will interduce kind of quick access layer on top of the real data store and it can signifcantly reduce
+            how we often we have to pull database.*/
+            services.AddMemoryCache();
+
+            services.ConfigureRateLimitingOptions();
+            services.AddHttpContextAccessor();
+
+            services.ConfigureHttpCacheHeaders();
+
+            services.AddResponseCaching();
+
             services.AddAuthentication();
 
             services.ConfigureIdentity();
+
+            services.ConfigureJWT(Configuration);
 
             services.ConfigureCors();
 
@@ -48,7 +64,7 @@ namespace Accounting.WebAPI
             services.AddAutoMapper(typeof(MapperInitilizer));
 
             //services.AddTransient<IUnitOfWork, UnitOfWork>();
-            #region *
+
             services.AddTransient<IUnitOfWork, UnitOfWork>(sp =>
              {
                  Data.Tools.Options options =
@@ -64,32 +80,35 @@ namespace Accounting.WebAPI
 
                  return new UnitOfWork(options: options);
              });
-            #endregion *
+
+            services.AddScoped<IAuthManager, AuthManager>();
 
 
-            /*We are basically saying when you notice the reference loop happening , do not make big deal out of just
-             ignore it and let program run*/
-            services.AddControllers().AddNewtonsoftJson(op =>
-                op.SerializerSettings.ReferenceLoopHandling =
-                    Newtonsoft.Json.ReferenceLoopHandling.Ignore);
-
-            services.Configure<ApiBehaviorOptions>(options =>
-            {
-                options.SuppressModelStateInvalidFilter = true;
-            });
+            //services.Configure<ApiBehaviorOptions>(options =>
+            //{
+            //    options.SuppressModelStateInvalidFilter = true;
+            //});
 
             /*It supports versioning so if we have version 1 , version 2 .. we are able to keep trackes of the versions or let whoever reades the documention know which 
             of the api they are looking at*/
-            services.AddSwaggerGen(c =>
+            services.ConfigureSwagger();
+
+            /*We are basically saying when you notice the reference loop happening , do not make big deal out of just
+             ignore it and let program run*/
+            services.AddControllers(config =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Accounting.WebAPI", Version = "v1" });
-            });
+                config.CacheProfiles.Add("120SecondsDuration", new CacheProfile { Duration = 120 });
+            }).AddNewtonsoftJson(op =>
+                op.SerializerSettings.ReferenceLoopHandling =
+                    Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+
+            services.ConfigureVersioning();
         }
 
 
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerManager logger)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             /*env is just a variable that allow s us to track witch enviroment we are in*/
             if (env.IsDevelopment())
@@ -97,22 +116,26 @@ namespace Accounting.WebAPI
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "accounting.webapi v1"));
+            app.UseSwagger(); app.UseSwaggerUI(s =>
+            {
+                s.SwaggerEndpoint("/swagger/v1/swagger.json", "Accounting.WebAPI v1");
+                s.SwaggerEndpoint("/swagger/v2/swagger.json", "Accounting.WebAPI v2");
+            });
 
-            app.ConfigureExceptionHandler(logger);
+            app.ConfigureExceptionHandler();
 
-            app.UseStaticFiles();
+            app.UseHttpsRedirection();
 
             app.UseCors("CorsPolicy");
 
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.All
-            });
+            app.UseResponseCaching();
+            app.UseHttpCacheHeaders();
+
+            app.UseIpRateLimiting();
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

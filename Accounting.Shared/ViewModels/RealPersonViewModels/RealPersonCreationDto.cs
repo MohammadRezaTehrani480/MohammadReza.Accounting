@@ -5,13 +5,29 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Accounting.Shared.ViewModels.CashViewModels;
+using Accounting.Shared.ViewModels.PersonViewModels;
 
 namespace Accounting.Shared.ViewModels.RealPersonViewModels
 {
     public class RealPersonCreationDTO
     {
+        [Required(ErrorMessage = "Legalperson address is a required field.")]
+        [MaxLength(200, ErrorMessage = "Maximum length for the address is 30 characters.")]
+        public string Address { get; set; }
+
+
+        [Required(ErrorMessage = "Legalperson phone number is a required field.")]
+        [MaxLength(11, ErrorMessage = "Maximum length for the phone number is 30 characters.")]
+        public string PhoneNumber { get; set; }
+
+
+        [Required(ErrorMessage = "Legalperson email is a required field.")]
+        [MaxLength(200, ErrorMessage = "Maximum length for the email is 30 characters.")]
+        public string Email { get; set; }
+
+
         [Required(ErrorMessage = "Realperson national code is a required field.")]
-        [MaxLength(30, ErrorMessage = "Maximum length for the national code is 10 characters.")]
+        [MaxLength(10, ErrorMessage = "Maximum length for the national code is 10 characters.")]
         public string NationalCode { get; set; }
 
 

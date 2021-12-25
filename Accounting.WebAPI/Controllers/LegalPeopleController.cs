@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 using Infrastructure;
 using Accounting.WebAPI.Data;
 using AutoMapper;
-using Accounting.WebAPI.Contracts;
 using Accounting.WebAPI.Entities;
 using Accounting.Shared.ViewModels.LegalPersonViewModels;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Accounting.WebAPI.Controllers
 {
@@ -24,128 +25,128 @@ namespace Accounting.WebAPI.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetAllLegalPersonAsync()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllLegalPersonAsync([FromQuery] RequestParams requestParams)
         {
-            try
-            {
-                var legalPeople = await UnitOfWork.PersonRepository.GetAllLegalPeopleUdemyAsync();
+            var legalPeople = await UnitOfWork.PersonRepository.GetAllLegalPeopleUdemyPagingAsync(requestParams);
 
-                var legalPeopleDTO = _mapper.Map<IList<LegalPersonDTO>>(legalPeople);
+            var legalPeopleDTO = _mapper.Map<IList<LegalPersonDTO>>(legalPeople);
 
-                return Ok(value: legalPeopleDTO);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Something went wrong in the {nameof(GetAllLegalPersonAsync)} action {ex}");
-
-                return StatusCode(500, "Internal server error!");
-            }
+            return Ok(value: legalPeopleDTO);
         }
 
 
-        [HttpGet("{id:int}", Name = "LegalPersonById")]
+        [HttpGet("{id:int}", Name = "GetSingelLegalPersonAsync")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetSingelLegalPersonAsync(int id)
         {
-            try
-            {
-                var legalPerson = await UnitOfWork.PersonRepository.GetSingelLegalPersonUdemyAsync(q => q.Id == id);
+            var legalPerson = await UnitOfWork.PersonRepository.GetSingelLegalPersonUdemyAsync(q => q.Id == id);
 
-                if (legalPerson == null)
-                {
-                    _logger.LogError($"LegalPerson with id: {id} doesn't exist in the database.");
-                    return NotFound();
-                }
-                else
-                {
-                    var legalPersonDTO = _mapper.Map<LegalPersonDTO>(legalPerson);
-                    return Ok(legalPersonDTO);
-                }
+            if (legalPerson == null)
+            {
+                _logger.LogError($"LegalPerson with id: {id} doesn't exist in the database.");
+                return NotFound();
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError($"Something went wrong in the {nameof(GetSingelLegalPersonAsync)} action {ex}");
-
-                return StatusCode(500, "Internal server error!");
+                var legalPersonDTO = _mapper.Map<LegalPersonDTO>(legalPerson);
+                return Ok(legalPersonDTO);
             }
         }
 
-        #region *
-        //[HttpPost]
-        //public async Task<IActionResult> CreateLegalPersonAsync([FromBody] LegalPersonCreationDTO legalPerson)
-        //{
-        //    if (legalPerson == null)
-        //    {
-        //        _logger.LogError("LegalPersonCreationViewModel object sent from client is null.");
+        [Authorize(Roles = "Administrator")]
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateLegalPersonAsync([FromBody] LegalPersonCreationDTO legalPersonDTO)
+        {
+            if (legalPersonDTO == null)
+            {
+                _logger.LogError("LegalPersonCreationViewModel object sent from client is null.");
 
-        //        return BadRequest("LegalPersonCreationViewModel object is null");
-        //    }
+                return BadRequest("LegalPersonCreationViewModel object is null");
+            }
 
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the LegalPersonCreationDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
+            if (!ModelState.IsValid)
+            {
+                _logger.LogError("Invalid model state for the LegalPersonCreationDto object");
+                return BadRequest(ModelState);
+            }
 
-        //    var legalPersonResult = _mapper.Map<LegalPerson>(legalPerson);
+            var legalPerson = _mapper.Map<LegalPerson>(legalPersonDTO);
 
-        //    await UnitOfWork.PersonRepository.InsertAsync(legalPersonResult);
+            await UnitOfWork.PersonRepository.InsertAsync(legalPerson);
 
-        //    await UnitOfWork.SaveAsync();
+            await UnitOfWork.SaveAsync();
 
-        //    var legalPersonToReturn = _mapper.Map<LegalPersonDTO>(legalPersonResult);
+            return CreatedAtRoute("GetSingelLegalPersonAsync", new { id = legalPerson.Id }, legalPerson);
+        }
 
-        //    return CreatedAtRoute("LegalPersonById", new { id = legalPersonToReturn.Id }, legalPersonToReturn);
-        //}
+        [Authorize]
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateLegalPersonAsync(int id, [FromBody] LegalPersonUpdateDTO legalPersonDTO)
+        {
+            if (legalPersonDTO == null)
+            {
+                _logger.LogError("LegalPersonUpdateViewModel object sent from client is null.");
+                return BadRequest("LegalPersonUpdateViewModel object is null");
+            }
 
+            if (!ModelState.IsValid || id < 1)
+            {
+                _logger.LogError("Invalid model state for the LegalPersonUpdateDto object");
+                return BadRequest("");
+            }
 
-        //[HttpDelete("{id}")]
-        //public async Task<IActionResult> DeleteLegalPersonAsync(int id)
-        //{
-        //    var legalPerson = await UnitOfWork.PersonRepository.GetSingelLegalPersonAsync(id);
+            var legalPerson = await UnitOfWork.PersonRepository.GetSingelLegalPersonUdemyAsync(q => q.Id == id);
 
-        //    if (legalPerson == null)
-        //    {
-        //        _logger.LogError($"LegalPerson with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
-        //    await UnitOfWork.PersonRepository.DeleteLegalPersonAsync(legalPerson);
+            if (legalPerson == null)
+            {
+                _logger.LogError($"LegalPerson with id: {id} doesn't exist in the database.");
+                return BadRequest("Submitted data is invalid!");
+            }
 
-        //    await UnitOfWork.SaveAsync();
+            _mapper.Map(legalPersonDTO, legalPerson);
 
-        //    return NoContent();
-        //}
+            UnitOfWork.PersonRepository.Update(legalPerson);
 
+            await UnitOfWork.SaveAsync();
 
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateLegalPersonAsync(int id, [FromBody] LegalPersonUpdateDto legalPerson)
-        //{
-        //    if (legalPerson == null)
-        //    {
-        //        _logger.LogError("LegalPersonUpdateViewModel object sent from client is null.");
-        //        return BadRequest("LegalPersonUpdateViewModel object is null");
-        //    }
+            return NoContent();
+        }
 
-        //    if (!ModelState.IsValid)
-        //    {
-        //        _logger.LogError("Invalid model state for the LegalPersonUpdateDto object");
-        //        return UnprocessableEntity(ModelState);
-        //    }
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteLegalPersonAsync(int id)
+        {
+            if (id < 1)
+            {
+                _logger.LogError($"LegalPerson with Id: {id} does not exist in the database!");
 
-        //    var legalPersonEntity = await UnitOfWork.PersonRepository.GetSingelLegalPersonAsync(id);
+                return BadRequest();
+            }
 
-        //    if (legalPersonEntity == null)
-        //    {
-        //        _logger.LogError($"LegalPerson with id: {id} doesn't exist in the database.");
-        //        return NotFound();
-        //    }
+            var legalPerson = await UnitOfWork.PersonRepository.GetSingelLegalPersonUdemyAsync(q => q.Id == id);
+            if (legalPerson == null)
+            {
+                _logger.LogError($"Invalid DELETE attempt in {nameof(DeleteLegalPersonAsync)}");
+                return BadRequest("Submitted data is invalid");
+            }
 
-        //    _mapper.Map(legalPerson, legalPersonEntity);
+            await UnitOfWork.PersonRepository.DeleteByIdAsync(id);
+            await UnitOfWork.SaveAsync();
 
-        //    await UnitOfWork.SaveAsync();
-
-        //    return NoContent();
-        //}
-        #endregion *
+            return NoContent();
+        }
     }
 }
 
